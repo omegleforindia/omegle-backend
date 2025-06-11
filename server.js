@@ -34,6 +34,12 @@ io.on("connection", (socket) => {
       partners.delete(socket.id);
       partners.delete(p);
     }
+    socket.on("typing", () => {
+  const partnerId = partners.get(socket.id);
+  if (partnerId) {
+    io.to(partnerId).emit("typing");
+  }
+});
     if (waitingUser && waitingUser !== socket.id) {
       partners.set(socket.id, waitingUser);
       partners.set(waitingUser, socket.id);
