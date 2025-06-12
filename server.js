@@ -7,6 +7,7 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
+const badWords = ["sex", "nude", "xxx", "boobs", "fuck", "porn", "horny"];
 
 let waitingUser = null;
 const partners = new Map();
@@ -22,10 +23,18 @@ io.on("connection", (socket) => {
     waitingUser = socket.id;
   }
 
-  socket.on("message", (msg) => {
-    const p = partners.get(socket.id);
-    if (p) io.to(p).emit("message", msg);
-  });
+socket.on("message", (msg) => {
+  const lowerMsg = msg.toLowerCase();
+  const hasBadWord = badWords.some(word => lowerMsg.includes(word));
+
+  if (hasBadWord) {
+    socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
+    return; // just warn, don’t send the message to partner
+  }
+
+  const p = partners.get(socket.id);
+  if (p) io.to(p).emit("message", msg);
+});
 
   socket.on("next", () => {
     const p = partners.get(socket.id);
