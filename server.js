@@ -7,7 +7,45 @@ const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*" }
 });
-const badWords = ["sex", "nude", "xxx", "boobs", "fuck", "porn", "horny"];
+const badWords = [
+  "sex",
+  "porn",
+  "xxx",
+  "nude",
+  "naked",
+  "boobs",
+  "pussy",
+  "dick",
+  "cock",
+  "asshole",
+  "slut",
+  "bitch",
+  "fucking",
+  "fuck",
+  "shit",
+  "damn",
+  "bastard",
+  "whore",
+  "cunt",
+  "rape",
+  "horny",
+  "suck",
+  "blowjob",
+  "tit",
+  "milf",
+  "anal",
+  "gay",
+  "lesbian",
+  "trans",
+  "hentai",
+  "creampie",
+  "orgy",
+  "deepthroat",
+  "sexy",
+  "cum",
+  "ejaculate",
+  "masturbate"
+];
 
 let waitingUser = null;
 const partners = new Map();
