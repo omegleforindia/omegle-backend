@@ -73,6 +73,23 @@ io.on("connection", (socket) => {
     if (p) io.to(p).emit("message", msg);
   });
 
+
+
+// ✅ ADD THIS BELOW socket.on("message")
+socket.on("typing", () => {
+  const partner = partners.get(socket.id);
+  if (partner) {
+    io.to(partner).emit("typing");
+  }
+});
+
+socket.on("stop_typing", () => {
+  const partner = partners.get(socket.id);
+  if (partner) {
+    io.to(partner).emit("stop_typing");
+  }
+});
+  
   socket.on("next", () => {
     const p = partners.get(socket.id);
     if (p) {
