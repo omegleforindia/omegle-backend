@@ -68,6 +68,14 @@ io.on("connection", (socket) => {
   });
 
   socket.on("typing", () => {
+  if (socket.currentMessage && containsBadWords(socket.currentMessage)) {
+    socket.emit("warning", "Inappropriate language detected.");
+  } else if (partner) {
+    partner.emit("typing");
+  }
+});
+
+  socket.on("typing", () => {
     const partnerId = partners.get(socket.id);
     if (partnerId) {
       io.to(partnerId).emit("typing");
