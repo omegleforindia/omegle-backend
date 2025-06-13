@@ -15,7 +15,7 @@ const server = http.createServer(app);
 // ✅ Use your real domain here
 const io = new Server(server, {
   cors: {
-    origin: ["https://yourdomain.com", "https://omegleforindia.github.io"],
+    origin: ["https://ochat.in", "https://omegleforindia.github.io"],
     methods: ["GET", "POST"],
   },
 });
