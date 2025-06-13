@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Ochat Admin Dashboard</title>
+</head>
+<body>
+  <h1>Admin Dashboard</h1>
+  <p>👥 Live Users Online: <span id="live-users">0</span></p>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    socket.emit("join-admin");
+
+    socket.on("stats", (data) => {
+      document.getElementById("live-users").textContent = data.onlineUsers;
+    });
+  </script>
+</body>
+</html>
