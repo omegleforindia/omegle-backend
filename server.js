@@ -11,7 +11,6 @@ const mongoSanitize = require("express-mongo-sanitize");
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Use your real domain here (for production)
 const io = new Server(server, {
   cors: {
     origin: ["https://ochat.in", "https://omegleforindia.github.io"],
@@ -19,26 +18,22 @@ const io = new Server(server, {
   },
 });
 
-// ✅ Security Middleware
 app.use(helmet());
 app.use(cors());
 app.use(xss());
 app.use(mongoSanitize());
 app.disable("x-powered-by");
 
-// ✅ Rate Limiting
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // max 60 requests per minute
+  windowMs: 1 * 60 * 1000,
+  max: 60,
 });
 app.use(limiter);
 
-// ✅ Basic Route (optional)
 app.get("/", (req, res) => {
   res.send("OCHAT server is running.");
 });
 
-// 🔞 Blocked Words
 const badWords = [
   "sex", "porn", "xxx", "nude", "naked", "boobs", "pussy", "dick", "cock",
   "asshole", "slut", "bitch", "fucking", "fuck", "shit", "damn", "bastard",
@@ -47,7 +42,6 @@ const badWords = [
   "sexy", "cum", "ejaculate", "masturbate"
 ];
 
-// 💬 Socket.io logic
 let waitingUser = null;
 const partners = new Map();
 
@@ -73,17 +67,20 @@ io.on("connection", (socket) => {
     if (p) io.to(p).emit("message", msg);
   });
 
+  socket.on("typing", () => {
+    const partnerId = partners.get(socket.id);
+    if (partnerId) {
+      io.to(partnerId).emit("typing");
+    }
+  });
 
+  socket.on("stop_typing", () => {
+    const partnerId = partners.get(socket.id);
+    if (partnerId) {
+      io.to(partnerId).emit("stop_typing");
+    }
+  });
 
-
-
-socket.on("stop_typing", () => {
-  const partner = partners.get(socket.id);
-  if (partner) {
-    io.to(partner).emit("stop_typing");
-  }
-});
-  
   socket.on("next", () => {
     const p = partners.get(socket.id);
     if (p) {
@@ -109,24 +106,8 @@ socket.on("stop_typing", () => {
     partners.delete(socket.id);
     partners.delete(p);
   });
-
-  // ✅ Typing Events
-  socket.on("typing", () => {
-    const partnerId = partners.get(socket.id);
-    if (partnerId) {
-      io.to(partnerId).emit("partner-typing");
-    }
-  });
-
-  socket.on("stop-typing", () => {
-    const partnerId = partners.get(socket.id);
-    if (partnerId) {
-      io.to(partnerId).emit("partner-stopped-typing");
-    }
-  });
 });
 
-// 🛡 Start Server
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("Server running on port", PORT);
