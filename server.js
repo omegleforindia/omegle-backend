@@ -14,7 +14,7 @@ const server = http.createServer(app);
 // ✅ Use your real domain here (for production)
 const io = new Server(server, {
   cors: {
-    origin: ["https://yourdomain.com", "https://omegleforindia.github.io"], 
+    origin: ["https://ochat.in", "https://omegleforindia.github.io"],
     methods: ["GET", "POST"],
   },
 });
@@ -69,7 +69,6 @@ io.on("connection", (socket) => {
       socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
       return;
     }
-
     const p = partners.get(socket.id);
     if (p) io.to(p).emit("message", msg);
   });
@@ -81,7 +80,6 @@ io.on("connection", (socket) => {
       partners.delete(socket.id);
       partners.delete(p);
     }
-
     if (waitingUser && waitingUser !== socket.id) {
       partners.set(socket.id, waitingUser);
       partners.set(waitingUser, socket.id);
@@ -96,15 +94,28 @@ io.on("connection", (socket) => {
   socket.on("disconnect", () => {
     const p = partners.get(socket.id);
     if (p) io.to(p).emit("partner-left");
-
     if (waitingUser === socket.id) waitingUser = null;
-
     partners.delete(socket.id);
     partners.delete(p);
   });
+
+  // ✅ Typing Events
+  socket.on("typing", () => {
+    const partnerId = partners.get(socket.id);
+    if (partnerId) {
+      io.to(partnerId).emit("partner-typing");
+    }
+  });
+
+  socket.on("stop-typing", () => {
+    const partnerId = partners.get(socket.id);
+    if (partnerId) {
+      io.to(partnerId).emit("partner-stopped-typing");
+    }
+  });
 });
 
-// 🛡️ Start Server
+// 🛡 Start Server
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
   console.log("Server running on port", PORT);
