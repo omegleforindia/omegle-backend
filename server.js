@@ -7,15 +7,14 @@ const cors = require("cors");
 const rateLimit = require("express-rate-limit");
 const xss = require("xss-clean");
 const mongoSanitize = require("express-mongo-sanitize");
-const path = require("path");
 
 const app = express();
 const server = http.createServer(app);
 
-// ✅ Use your real domain here
+// ✅ Use your real domain here (for production)
 const io = new Server(server, {
   cors: {
-    origin: ["https://ochat.in", "https://omegleforindia.github.io"],
+    origin: ["https://yourdomain.com", "https://omegleforindia.github.io"], 
     methods: ["GET", "POST"],
   },
 });
@@ -29,26 +28,14 @@ app.disable("x-powered-by");
 
 // ✅ Rate Limiting
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 60,
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // max 60 requests per minute
 });
 app.use(limiter);
 
-// ✅ Serve static files (for dashboard)
-app.use(express.static(path.join(__dirname)));
-
-// ✅ Basic route
+// ✅ Basic Route (optional)
 app.get("/", (req, res) => {
   res.send("OCHAT server is running.");
-});
-
-// ✅ Admin Dashboard route (protected by ?secret=...)
-app.get("/admin-dashboard", (req, res) => {
-  const secret = req.query.secret;
-  if (secret !== "yourSecret123") {
-    return res.status(403).send("Forbidden");
-  }
-  res.sendFile(path.join(__dirname, "admin.html"));
 });
 
 // 🔞 Blocked Words
@@ -63,21 +50,8 @@ const badWords = [
 // 💬 Socket.io logic
 let waitingUser = null;
 const partners = new Map();
-let onlineUsers = 0;
 
 io.on("connection", (socket) => {
-  onlineUsers++;
-
-  // Join admin room if admin
-  socket.on("join-admin", () => {
-    socket.join("admin");
-    socket.emit("stats", { onlineUsers });
-  });
-
-  // Broadcast new user count to admin dashboard
-  io.to("admin").emit("stats", { onlineUsers });
-
-  // Matching logic
   if (waitingUser) {
     partners.set(socket.id, waitingUser);
     partners.set(waitingUser, socket.id);
@@ -95,6 +69,7 @@ io.on("connection", (socket) => {
       socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
       return;
     }
+
     const p = partners.get(socket.id);
     if (p) io.to(p).emit("message", msg);
   });
@@ -106,6 +81,7 @@ io.on("connection", (socket) => {
       partners.delete(socket.id);
       partners.delete(p);
     }
+
     if (waitingUser && waitingUser !== socket.id) {
       partners.set(socket.id, waitingUser);
       partners.set(waitingUser, socket.id);
@@ -118,11 +94,11 @@ io.on("connection", (socket) => {
   });
 
   socket.on("disconnect", () => {
-    onlineUsers--;
-    io.to("admin").emit("stats", { onlineUsers });
     const p = partners.get(socket.id);
     if (p) io.to(p).emit("partner-left");
+
     if (waitingUser === socket.id) waitingUser = null;
+
     partners.delete(socket.id);
     partners.delete(p);
   });
