@@ -61,16 +61,16 @@ io.on("connection", (socket) => {
     waitingUser = socket.id;
   }
 
- socket.on("message", (msg) => {
+socket.on("message", (msg) => {
   if (containsBadWords(msg)) {
     socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
     return;
   }
+
   const p = partners.get(socket.id);
   if (p) {
-    // Send to both users to display the message
-    io.to(p).emit("message", msg);
-    socket.emit("message", msg);
+    io.to(p).emit("message", msg);       // send to partner
+    socket.emit("message", msg);         // confirm back to sender
   }
 });
 
