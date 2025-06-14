@@ -28,8 +28,8 @@ app.disable("x-powered-by");
 
 // ✅ Rate Limiting
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 60, // max 60 requests per minute
+  windowMs: 1 * 60 * 1000,
+  max: 60,
 });
 app.use(limiter);
 
@@ -80,6 +80,7 @@ io.on("connection", (socket) => {
       partners.delete(socket.id);
       partners.delete(p);
     }
+
     if (waitingUser && waitingUser !== socket.id) {
       partners.set(socket.id, waitingUser);
       partners.set(waitingUser, socket.id);
@@ -97,21 +98,6 @@ io.on("connection", (socket) => {
     if (waitingUser === socket.id) waitingUser = null;
     partners.delete(socket.id);
     partners.delete(p);
-  });
-
-  // ✅ Typing Events
-  socket.on("typing", () => {
-    const partnerId = partners.get(socket.id);
-    if (partnerId) {
-      io.to(partnerId).emit("partner-typing");
-    }
-  });
-
-  socket.on("stop-typing", () => {
-    const partnerId = partners.get(socket.id);
-    if (partnerId) {
-      io.to(partnerId).emit("partner-stopped-typing");
-    }
   });
 });
 
