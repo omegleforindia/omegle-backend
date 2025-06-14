@@ -1,4 +1,4 @@
-// ---------- FIXED BACKEND (Express + Socket.IO) ----------
+// === BACKEND CODE (index.js or server.js) ===
 require("dotenv").config();
 const express = require("express");
 const http = require("http");
@@ -42,9 +42,9 @@ const badWords = [
   "sexy", "cum", "ejaculate", "masturbate"
 ];
 
-function containsBadWords(text) {
-  const cleanText = text.toLowerCase().replace(/[^a-z0-9 ]/gi, "");
-  return badWords.some(word => cleanText.includes(word));
+function containsBadWords(message) {
+  const lowerMsg = message.toLowerCase();
+  return badWords.some(word => lowerMsg.includes(word));
 }
 
 let waitingUser = null;
@@ -69,18 +69,22 @@ io.on("connection", (socket) => {
     const p = partners.get(socket.id);
     if (p) {
       io.to(p).emit("message", msg);
-      socket.emit("message", msg); // echo approved msg back
     }
+    socket.emit("message", msg); // echo back to sender
   });
 
   socket.on("typing", () => {
     const partnerId = partners.get(socket.id);
-    if (partnerId) io.to(partnerId).emit("typing");
+    if (partnerId) {
+      io.to(partnerId).emit("typing");
+    }
   });
 
   socket.on("stop_typing", () => {
     const partnerId = partners.get(socket.id);
-    if (partnerId) io.to(partnerId).emit("stop_typing");
+    if (partnerId) {
+      io.to(partnerId).emit("stop_typing");
+    }
   });
 
   socket.on("next", () => {
