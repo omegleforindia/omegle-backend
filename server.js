@@ -1,5 +1,3 @@
-// ---------- FIXED BACKEND (Express + Socket.IO) ----------
-
 require("dotenv").config();
 const express = require("express");
 const http = require("http");
@@ -12,6 +10,7 @@ const mongoSanitize = require("express-mongo-sanitize");
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
     origin: ["https://ochat.in", "https://omegleforindia.github.io"],
@@ -43,10 +42,6 @@ const badWords = [
   "sexy", "cum", "ejaculate", "masturbate"
 ];
 
-function containsBadWords(text) {
-  return badWords.some(word => text.toLowerCase().includes(word));
-}
-
 let waitingUser = null;
 const partners = new Map();
 
@@ -61,27 +56,37 @@ io.on("connection", (socket) => {
     waitingUser = socket.id;
   }
 
-socket.on("message", (msg) => {
-  if (containsBadWords(msg)) {
-    socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
-    return;
-  }
+  socket.on("message", (msg) => {
+    const lowerMsg = msg.toLowerCase();
+    const hasBadWord = badWords.some(word => lowerMsg.includes(word));
+    if (hasBadWord) {
+      socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
+      return;
+    }
+    const p = partners.get(socket.id);
+    if (p) io.to(p).emit("message", msg);
+  });
 
-  const p = partners.get(socket.id);
-  if (p) {
-    io.to(p).emit("message", msg);       // send to partner
-    socket.emit("message", msg);         // confirm back to sender
+  socket.on("typing", () => {
+  if (socket.currentMessage && containsBadWords(socket.currentMessage)) {
+    socket.emit("warning", "Inappropriate language detected.");
+  } else if (partner) {
+    partner.emit("typing");
   }
 });
 
   socket.on("typing", () => {
     const partnerId = partners.get(socket.id);
-    if (partnerId) io.to(partnerId).emit("typing");
+    if (partnerId) {
+      io.to(partnerId).emit("typing");
+    }
   });
 
   socket.on("stop_typing", () => {
     const partnerId = partners.get(socket.id);
-    if (partnerId) io.to(partnerId).emit("stop_typing");
+    if (partnerId) {
+      io.to(partnerId).emit("stop_typing");
+    }
   });
 
   socket.on("next", () => {
