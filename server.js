@@ -1,10 +1,4 @@
-// ✅✅✅ OCHAT — FULLY FUNCTIONING BACKEND ✅✅✅
-// Features:
-// - Clean matchmaking
-// - Working chat with typing indicators
-// - Bad word filter (with 3-second warning)
-// - Stable next/disconnect handling
-
+// ---------- FIXED BACKEND (Express + Socket.IO) ----------
 require("dotenv").config();
 const express = require("express");
 const http = require("http");
@@ -17,7 +11,6 @@ const mongoSanitize = require("express-mongo-sanitize");
 
 const app = express();
 const server = http.createServer(app);
-
 const io = new Server(server, {
   cors: {
     origin: ["https://ochat.in", "https://omegleforindia.github.io"],
@@ -31,7 +24,10 @@ app.use(xss());
 app.use(mongoSanitize());
 app.disable("x-powered-by");
 
-const limiter = rateLimit({ windowMs: 60 * 1000, max: 60 });
+const limiter = rateLimit({
+  windowMs: 1 * 60 * 1000,
+  max: 60,
+});
 app.use(limiter);
 
 app.get("/", (req, res) => {
@@ -43,19 +39,19 @@ const badWords = [
   "asshole", "slut", "bitch", "fucking", "fuck", "shit", "damn", "bastard",
   "whore", "cunt", "rape", "horny", "suck", "blowjob", "tit", "milf", "anal",
   "gay", "lesbian", "trans", "hentai", "creampie", "orgy", "deepthroat",
-  "sexy", "cum", "ejaculate", "masturbate",
+  "sexy", "cum", "ejaculate", "masturbate"
 ];
+
+function containsBadWords(text) {
+  const cleanText = text.toLowerCase().replace(/[^a-z0-9 ]/gi, "");
+  return badWords.some(word => cleanText.includes(word));
+}
 
 let waitingUser = null;
 const partners = new Map();
 
-function containsBadWords(message) {
-  const lowerMsg = message.toLowerCase();
-  return badWords.some((word) => lowerMsg.includes(word));
-}
-
 io.on("connection", (socket) => {
-  if (waitingUser && waitingUser !== socket.id) {
+  if (waitingUser) {
     partners.set(socket.id, waitingUser);
     partners.set(waitingUser, socket.id);
     socket.emit("matched");
@@ -66,36 +62,34 @@ io.on("connection", (socket) => {
   }
 
   socket.on("message", (msg) => {
-    const p = partners.get(socket.id);
-
     if (containsBadWords(msg)) {
-      socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
+      socket.emit("blocked", "⚠️ Inappropriate content is not allowed.");
       return;
     }
-
+    const p = partners.get(socket.id);
     if (p) {
       io.to(p).emit("message", msg);
+      socket.emit("message", msg); // echo approved msg back
     }
   });
 
   socket.on("typing", () => {
-    const p = partners.get(socket.id);
-    if (p) io.to(p).emit("typing");
+    const partnerId = partners.get(socket.id);
+    if (partnerId) io.to(partnerId).emit("typing");
   });
 
   socket.on("stop_typing", () => {
-    const p = partners.get(socket.id);
-    if (p) io.to(p).emit("stop_typing");
+    const partnerId = partners.get(socket.id);
+    if (partnerId) io.to(partnerId).emit("stop_typing");
   });
 
   socket.on("next", () => {
     const p = partners.get(socket.id);
     if (p) {
       io.to(p).emit("partner-left");
-      partners.delete(p);
       partners.delete(socket.id);
+      partners.delete(p);
     }
-
     if (waitingUser && waitingUser !== socket.id) {
       partners.set(socket.id, waitingUser);
       partners.set(waitingUser, socket.id);
@@ -118,5 +112,5 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 10000;
 server.listen(PORT, () => {
-  console.log("✅ Server running on port", PORT);
+  console.log("Server running on port", PORT);
 });
