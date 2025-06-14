@@ -18,6 +18,13 @@ const io = new Server(server, {
     methods: ["GET", "POST"],
   },
 });
+const badWords = [
+  "sex", "porn", "xxx", "nude", "naked", "boobs", "pussy", "dick", "cock",
+  "asshole", "slut", "bitch", "fucking", "fuck", "shit", "damn", "bastard",
+  "whore", "cunt", "rape", "horny", "suck", "blowjob", "tit", "milf", "anal",
+  "gay", "lesbian", "trans", "hentai", "creampie", "orgy", "deepthroat",
+  "sexy", "cum", "ejaculate", "masturbate"
+];
 
 // ✅ Security Middleware
 app.use(helmet());
@@ -39,13 +46,7 @@ app.get("/", (req, res) => {
 });
 
 // 🔞 Blocked Words
-const badWords = [
-  "sex", "porn", "xxx", "nude", "naked", "boobs", "pussy", "dick", "cock",
-  "asshole", "slut", "bitch", "fucking", "fuck", "shit", "damn", "bastard",
-  "whore", "cunt", "rape", "horny", "suck", "blowjob", "tit", "milf", "anal",
-  "gay", "lesbian", "trans", "hentai", "creampie", "orgy", "deepthroat",
-  "sexy", "cum", "ejaculate", "masturbate"
-];
+
 
 // 💬 Socket.io logic
 let waitingUser = null;
