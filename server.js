@@ -14,7 +14,7 @@ const server = http.createServer(app);
 // ✅ Use your real domain here (for production)
 const io = new Server(server, {
   cors: {
-    origin: ["https://ochat.in", "https://omegleforindia.github.io"],
+    origin: ["https://yourdomain.com", "https://omegleforindia.github.io"],
     methods: ["GET", "POST"],
   },
 });
@@ -28,8 +28,8 @@ app.disable("x-powered-by");
 
 // ✅ Rate Limiting
 const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 60,
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 60, // max 60 requests per minute
 });
 app.use(limiter);
 
@@ -52,6 +52,7 @@ let waitingUser = null;
 const partners = new Map();
 
 io.on("connection", (socket) => {
+  // Matching logic
   if (waitingUser) {
     partners.set(socket.id, waitingUser);
     partners.set(waitingUser, socket.id);
@@ -62,6 +63,7 @@ io.on("connection", (socket) => {
     waitingUser = socket.id;
   }
 
+  // ✅ Handle incoming messages
   socket.on("message", (msg) => {
     const lowerMsg = msg.toLowerCase();
     const hasBadWord = badWords.some(word => lowerMsg.includes(word));
@@ -69,10 +71,18 @@ io.on("connection", (socket) => {
       socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
       return;
     }
+
     const p = partners.get(socket.id);
     if (p) io.to(p).emit("message", msg);
   });
 
+  // ✅ Handle typing indicator
+  socket.on("typing", () => {
+    const p = partners.get(socket.id);
+    if (p) io.to(p).emit("typing");
+  });
+
+  // ✅ Handle "Next" button
   socket.on("next", () => {
     const p = partners.get(socket.id);
     if (p) {
@@ -92,6 +102,7 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ✅ Handle disconnection
   socket.on("disconnect", () => {
     const p = partners.get(socket.id);
     if (p) io.to(p).emit("partner-left");
