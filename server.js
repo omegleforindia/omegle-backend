@@ -18,6 +18,15 @@ const io = new Server(server, {
   },
 });
 
+// 🚫 List of bad words to block
+const badWords = [
+  "sex", "porn", "xxx", "nude", "naked", "boobs", "pussy", "dick", "cock",
+  "asshole", "slut", "bitch", "fucking", "fuck", "shit", "damn", "bastard",
+  "whore", "cunt", "rape", "horny", "suck", "blowjob", "tit", "milf", "anal",
+  "gay", "lesbian", "trans", "hentai", "creampie", "orgy", "deepthroat",
+  "sexy", "cum", "ejaculate", "masturbate"
+];
+
 app.use(helmet());
 app.use(cors());
 app.use(xss());
@@ -34,13 +43,7 @@ app.get("/", (req, res) => {
   res.send("OCHAT server is running.");
 });
 
-const badWords = [
-  "sex", "porn", "xxx", "nude", "naked", "boobs", "pussy", "dick", "cock",
-  "asshole", "slut", "bitch", "fucking", "fuck", "shit", "damn", "bastard",
-  "whore", "cunt", "rape", "horny", "suck", "blowjob", "tit", "milf", "anal",
-  "gay", "lesbian", "trans", "hentai", "creampie", "orgy", "deepthroat",
-  "sexy", "cum", "ejaculate", "masturbate"
-];
+
 
 let waitingUser = null;
 const partners = new Map();
@@ -56,16 +59,18 @@ io.on("connection", (socket) => {
     waitingUser = socket.id;
   }
 
-  socket.on("message", (msg) => {
-    const lowerMsg = msg.toLowerCase();
-    const hasBadWord = badWords.some(word => lowerMsg.includes(word));
-    if (hasBadWord) {
-      socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
-      return;
-    }
-    const p = partners.get(socket.id);
-    if (p) io.to(p).emit("message", msg);
-  });
+ socket.on("message", (msg) => {
+  const lowerMsg = msg.toLowerCase();
+  const hasBadWord = badWords.some(word => lowerMsg.includes(word));
+
+  if (hasBadWord) {
+    socket.emit("warning", "⚠️ Inappropriate content is not allowed.");
+    return;
+  }
+
+  const p = partners.get(socket.id);
+  if (p) io.to(p).emit("message", msg);
+});
 
   socket.on("typing", () => {
   if (socket.currentMessage && containsBadWords(socket.currentMessage)) {
