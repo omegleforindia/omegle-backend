@@ -49,6 +49,7 @@ let waitingUser = null;
 const partners = new Map();
 
 io.on("connection", (socket) => {
+  socket.emit("warning", "⚠️ This is a test warning.");
   if (waitingUser) {
     partners.set(socket.id, waitingUser);
     partners.set(waitingUser, socket.id);
