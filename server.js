@@ -1,120 +1,99 @@
-// === BACKEND CODE (index.js or server.js) ===
-require("dotenv").config();
 const express = require("express");
 const http = require("http");
-const { Server } = require("socket.io");
-const helmet = require("helmet");
 const cors = require("cors");
-const rateLimit = require("express-rate-limit");
-const xss = require("xss-clean");
-const mongoSanitize = require("express-mongo-sanitize");
+const { Server } = require("socket.io");
+const Filter = require("bad-words");
 
 const app = express();
+app.use(cors());
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: ["https://ochat.in", "https://omegleforindia.github.io"],
-    methods: ["GET", "POST"],
-  },
+    origin: "*",
+    methods: ["GET", "POST"]
+  }
 });
-
-app.use(helmet());
-app.use(cors());
-app.use(xss());
-app.use(mongoSanitize());
-app.disable("x-powered-by");
-
-const limiter = rateLimit({
-  windowMs: 1 * 60 * 1000,
-  max: 60,
-});
-app.use(limiter);
-
-app.get("/", (req, res) => {
-  res.send("OCHAT server is running.");
-});
-
-const badWords = [
-  "sex", "porn", "xxx", "nude", "naked", "boobs", "pussy", "dick", "cock",
-  "asshole", "slut", "bitch", "fucking", "fuck", "shit", "damn", "bastard",
-  "whore", "cunt", "rape", "horny", "suck", "blowjob", "tit", "milf", "anal",
-  "gay", "lesbian", "trans", "hentai", "creampie", "orgy", "deepthroat",
-  "sexy", "cum", "ejaculate", "masturbate"
-];
-
-function containsBadWords(message) {
-  const lowerMsg = message.toLowerCase();
-  return badWords.some(word => lowerMsg.includes(word));
-}
 
 let waitingUser = null;
-const partners = new Map();
+const userToPartner = new Map();
+
+function pairUsers(user1, user2) {
+  userToPartner.set(user1, user2);
+  userToPartner.set(user2, user1);
+  user1.emit("matched");
+  user2.emit("matched");
+}
+
+function removeUser(socket) {
+  const partner = userToPartner.get(socket);
+  if (partner) {
+    partner.emit("partner-left");
+    userToPartner.delete(partner);
+  }
+  userToPartner.delete(socket);
+  if (waitingUser === socket) {
+    waitingUser = null;
+  }
+}
 
 io.on("connection", (socket) => {
+  console.log("User connected:", socket.id);
+
   if (waitingUser) {
-    partners.set(socket.id, waitingUser);
-    partners.set(waitingUser, socket.id);
-    socket.emit("matched");
-    io.to(waitingUser).emit("matched");
+    pairUsers(socket, waitingUser);
     waitingUser = null;
   } else {
-    waitingUser = socket.id;
+    waitingUser = socket;
   }
 
   socket.on("message", (msg) => {
-    if (containsBadWords(msg)) {
-      socket.emit("blocked", "⚠️ Inappropriate content is not allowed.");
+    const filter = new Filter();
+
+    if (filter.isProfane(msg)) {
+      socket.emit("blocked", "⚠️ Your message was blocked due to inappropriate content.");
       return;
     }
-    const p = partners.get(socket.id);
-    if (p) {
-      io.to(p).emit("message", msg);
+
+    const partner = userToPartner.get(socket);
+    if (partner) {
+      partner.emit("message", msg); // send to stranger
+      socket.emit("echo", msg);     // send back to sender
     }
-    socket.emit("message", msg); // echo back to sender
   });
 
   socket.on("typing", () => {
-    const partnerId = partners.get(socket.id);
-    if (partnerId) {
-      io.to(partnerId).emit("typing");
+    const partner = userToPartner.get(socket);
+    if (partner) {
+      partner.emit("typing");
     }
   });
 
   socket.on("stop_typing", () => {
-    const partnerId = partners.get(socket.id);
-    if (partnerId) {
-      io.to(partnerId).emit("stop_typing");
+    const partner = userToPartner.get(socket);
+    if (partner) {
+      partner.emit("stop_typing");
     }
   });
 
   socket.on("next", () => {
-    const p = partners.get(socket.id);
-    if (p) {
-      io.to(p).emit("partner-left");
-      partners.delete(socket.id);
-      partners.delete(p);
-    }
-    if (waitingUser && waitingUser !== socket.id) {
-      partners.set(socket.id, waitingUser);
-      partners.set(waitingUser, socket.id);
-      socket.emit("matched");
-      io.to(waitingUser).emit("matched");
-      waitingUser = null;
+    const partner = userToPartner.get(socket);
+    if (partner) {
+      partner.emit("partner-left");
+      userToPartner.delete(partner);
+      userToPartner.delete(socket);
+      pairUsers(socket, partner); // try rematching instantly
     } else {
-      waitingUser = socket.id;
+      waitingUser = socket;
     }
   });
 
   socket.on("disconnect", () => {
-    const p = partners.get(socket.id);
-    if (p) io.to(p).emit("partner-left");
-    if (waitingUser === socket.id) waitingUser = null;
-    partners.delete(socket.id);
-    partners.delete(p);
+    console.log("User disconnected:", socket.id);
+    removeUser(socket);
   });
 });
 
-const PORT = process.env.PORT || 10000;
-server.listen(PORT, () => {
-  console.log("Server running on port", PORT);
+server.listen(3000, () => {
+  console.log("Server running on port 3000");
 });
