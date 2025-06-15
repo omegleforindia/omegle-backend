@@ -80,7 +80,7 @@ io.emit("onlineUsers", onlineUsers); // send count to all users
 
   const p = partners.get(socket.id);
   if (p) io.to(p).emit("message", msg);
- });
+
  socket.on("disconnect", () => {
   onlineUsers--;
   io.emit("onlineUsers", onlineUsers); // update all users
