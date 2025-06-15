@@ -48,7 +48,14 @@ app.get("/", (req, res) => {
 let waitingUser = null;
 const partners = new Map();
 
+
+let onlineUsers=0
+
 io.on("connection", (socket) => {
+
+onlineUsers++;
+io.emit("onlineUsers", onlineUsers); // send count to all users
+  
   socket.emit("warning", "⚠️ This is a test warning.");
   if (waitingUser) {
     partners.set(socket.id, waitingUser);
@@ -60,6 +67,8 @@ io.on("connection", (socket) => {
     waitingUser = socket.id;
   }
 
+ 
+  
  socket.on("message", (msg) => {
   const lowerMsg = msg.toLowerCase();
   const hasBadWord = badWords.some(word => lowerMsg.includes(word));
@@ -71,7 +80,12 @@ io.on("connection", (socket) => {
 
   const p = partners.get(socket.id);
   if (p) io.to(p).emit("message", msg);
-});
+
+ socket.on("disconnect", () => {
+  onlineUsers--;
+  io.emit("onlineUsers", onlineUsers); // update all users
+
+ });
 
   socket.on("typing", () => {
   if (socket.currentMessage && containsBadWords(socket.currentMessage)) {
