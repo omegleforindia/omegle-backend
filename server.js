@@ -49,12 +49,11 @@ let waitingUser = null;
 const partners = new Map();
 
 
-let onlineUsers=0
+
 
 io.on("connection", (socket) => {
 
-onlineUsers++;
-io.emit("onlineUsers", onlineUsers); // send count to all users
+
   
   socket.emit("warning", "⚠️ This is a test warning.");
   if (waitingUser) {
@@ -80,12 +79,6 @@ io.emit("onlineUsers", onlineUsers); // send count to all users
 
   const p = partners.get(socket.id);
   if (p) io.to(p).emit("message", msg);
-
- socket.on("disconnect", () => {
-  onlineUsers--;
-  io.emit("onlineUsers", onlineUsers); // update all users
-
- });
  });
   socket.on("typing", () => {
   if (socket.currentMessage && containsBadWords(socket.currentMessage)) {
